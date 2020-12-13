@@ -1,0 +1,129 @@
+from flask import Flask, redirect, url_for, session, request, jsonify
+from flask_oauthlib.client import OAuth
+from flask import request
+from flask import render_template
+import ntplib
+from time import ctime
+import hashlib  # secure hashes and message digests
+import sqlite3
+
+flaskApp = Flask(__name__)
+database = "database.db"
+flaskApp.config['GOOGLE_ID'] = "937632115184-49gtf8rtirdg5000g0eiie325k25mpvg.apps.googleusercontent.com"
+flaskApp.config['GOOGLE_SECRET'] = "4f_qgKmV4vTwALuWlaLdV6n5"
+flaskApp.debug = True
+flaskApp.secret_key = 'development'
+oauth = OAuth(flaskApp)
+
+google = oauth.remote_app(
+    'google',
+    consumer_key=flaskApp.config.get('GOOGLE_ID'),
+    consumer_secret=flaskApp.config.get('GOOGLE_SECRET'),
+    request_token_params={
+        'scope': 'email'
+    },
+    base_url='https://www.googleapis.com/oauth2/v1/',
+    request_token_url=None,
+    access_token_method='POST',
+    access_token_url='https://accounts.google.com/o/oauth2/token',
+    authorize_url='https://accounts.google.com/o/oauth2/auth',
+)
+
+
+@flaskApp.route('/')
+def index():
+    if 'google_token' in session:
+        me = google.get('userinfo')
+        return jsonify({"data": me.data})
+    return redirect(url_for('login'))
+
+
+@flaskApp.route('/login')
+def login():
+    return google.authorize(callback=url_for('authorized', _external=True))
+
+
+@flaskApp.route('/logout')
+def logout():
+    session.pop('google_token', None)
+    return redirect(url_for('/login'))
+
+
+@flaskApp.route('/login/authorized')
+def authorized():
+    resp = google.authorized_response()
+    if resp is None:
+        return 'Access denied: reason=%s error=%s' % (
+            request.args['error_reason'],
+            request.args['error_description']
+        )
+    session['google_token'] = (resp['access_token'], '')
+    me = google.get('userinfo')
+    return jsonify({"data": me.data})
+
+
+@google.tokengetter
+def get_google_oauth_token():
+    return session.get('google_token')
+
+
+@flaskApp.route("/loginSQL")
+def main():
+    return render_template("login.html")
+
+
+@flaskApp.route("/index")
+def home():
+    return render_template("index.html")
+
+
+@flaskApp.route("/ntpserver")
+def ntpserver():
+    c = ntplib.NTPClient()
+    response = c.request('be.pool.ntp.org', version=3)
+    return ctime(response.tx_time)
+
+
+@flaskApp.route("/signupSuccess", methods=["POST", "GET"])
+def signupSuccess():
+    conn = sqlite3.connect(database)
+    cursur = conn.cursor()
+    cursur.execute(
+        "CREATE TABLE IF NOT EXISTS users(username TEXT PRIMARY KEY NOT NULL, password TEXT NOT NULL);")
+    conn.commit()
+    try:
+        usernameSingup = request.form["usernameSingup"]
+        hash_value = hashlib.sha3_256(
+            request.form['passwordSignup'].encode()).hexdigest()
+        cursur.execute(
+            "INSERT INTO users(username, password) VALUES(?, ?)", (usernameSingup, hash_value))
+        conn.commit()
+        conn.close()
+    except sqlite3.IntegrityError:
+        return "username has been registered."
+    msg = "ok"
+    return msg
+
+
+@flaskApp.route("/loginSuccess", methods=["POST", "GET"])
+def loginSuccess():
+    error = None
+    if request.method == "POST":
+        password = request.form["password"]
+        username = request.form["username"]
+        conn = sqlite3.connect(database)
+        cursur2 = conn.cursor()
+        cursur2.execute(
+            "SELECT password FROM Users WHERE username = ?", (username,))
+        records = cursur2.fetchone()
+        if not records:
+            return "not ok"
+        records[0] == hashlib.sha256(password.encode()).hexdigest()
+        return "ok"
+    else:
+        error = 'Invalid Method'
+    return error
+
+
+if __name__ == "__main__":
+    flaskApp.run(host="0.0.0.0", port=5050)
