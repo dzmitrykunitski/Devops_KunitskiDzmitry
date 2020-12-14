@@ -1,11 +1,16 @@
+import sqlite3
+import hashlib  # secure hashes and message digests
+from time import ctime
+import json
+import requests
+import urllib.parse
 from flask import Flask, redirect, url_for, session, request, jsonify
 from flask_oauthlib.client import OAuth
 from flask import request
 from flask import render_template
 import ntplib
-from time import ctime
-import hashlib  # secure hashes and message digests
-import sqlite3
+import ssl
+ssl._create_default_https_context = ssl._create_unverified_context
 
 flaskApp = Flask(__name__)
 database = "database.db"
@@ -33,8 +38,8 @@ google = oauth.remote_app(
 @flaskApp.route('/')
 def index():
     if 'google_token' in session:
-        me = google.get('userinfo')
-        return jsonify({"data": me.data})
+        # me = google.get('userinfo')
+        return redirect(url_for('mypage'))
     return redirect(url_for('login'))
 
 
@@ -58,8 +63,9 @@ def authorized():
             request.args['error_description']
         )
     session['google_token'] = (resp['access_token'], '')
-    me = google.get('userinfo')
-    return jsonify({"data": me.data})
+    # me = google.get('userinfo')
+    return redirect(url_for('mypage'))
+   # return jsonify({"data": me.data})
 
 
 @google.tokengetter
@@ -75,6 +81,50 @@ def main():
 @flaskApp.route("/index")
 def home():
     return render_template("index.html")
+
+
+@flaskApp.route("/mypage")
+def mypage():
+    return render_template("mypage.html")
+
+
+@flaskApp.route("/maps")
+def maps():
+    return render_template("maps.html")
+
+
+@flaskApp.route("/googlemapssuccess", methods=["POST", "GET"])
+def googlemapssuccess():
+    error = None
+    if request.method == "POST":
+        location = request.form["location"]
+        url = "https://maps.googleapis.com/maps/api/geocode/json"
+        key = "AIzaSyAJGeIANfCVd8MbXsbXqLKXq1bKqX2QVgA"
+        uri = url + "?" + "address" + "=" + location + "&" + "key" + "=" + key
+        json_data = requests.get(uri).json()
+        return json_data
+    else:
+        error = 'Invalid Method'
+    return error
+
+
+@flaskApp.route("/mapquestssuccess", methods=["POST", "GET"])
+def mapquestssuccess():
+    error = None
+    if request.method == "POST":
+        main_api = "https://www.mapquestapi.com/directions/v2/route?"
+        key = "th0o4YURLPy443wAxKekVk1OzaNOkJqm"
+        fromlocation = request.form["fromlocation"]
+        tolocation = request.form["tolocation"]
+        url = main_api + \
+            urllib.parse.urlencode(
+                {"key": key, "from": fromlocation, "to": tolocation})
+        json_data = requests.get(url).json()
+        return json_data
+
+    else:
+        error = 'Invalid Method'
+    return error
 
 
 @flaskApp.route("/ntpserver")
@@ -119,7 +169,7 @@ def loginSuccess():
         if not records:
             return "not ok"
         records[0] == hashlib.sha256(password.encode()).hexdigest()
-        return "ok"
+        return redirect(url_for('mypage'))
     else:
         error = 'Invalid Method'
     return error
