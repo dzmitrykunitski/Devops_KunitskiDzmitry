@@ -29,5 +29,4 @@ cd tempdir
 docker build -t inloggenapp .
 docker run -t -d -p 5050:5050 --name myinloggenapp inloggenapp
 docker ps -a
-./ngrok http 5050
-
+echo "./ngrok http 5050"
