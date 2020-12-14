@@ -17,6 +17,7 @@ echo "RUN pip3 install flask-ngrok" >> tempdir/Dockerfile
 
 
 echo "COPY ./templates /home/myapp/templates/" >> tempdir/Dockerfile 
+echo "COPY flask_ngrok.py /home/myapp/" >> tempdir/Dockerfile
 echo "COPY flask_app.py /home/myapp/" >> tempdir/Dockerfile
 echo "COPY flask_app_test.py /home/myapp/" >> tempdir/Dockerfile
 
