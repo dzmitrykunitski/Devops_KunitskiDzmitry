@@ -5,6 +5,7 @@ mkdir tempdir/templates
 
 cp flask_app.py tempdir/.
 cp flask_app_test.py tempdir/.
+cp flask_ngrok.py tempdir/.
 cp -r templates/* tempdir/templates/. 
 
 echo "FROM python" >> tempdir/Dockerfile
