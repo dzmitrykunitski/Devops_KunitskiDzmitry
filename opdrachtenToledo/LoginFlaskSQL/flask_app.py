@@ -14,7 +14,7 @@ import ssl
 ssl._create_default_https_context = ssl._create_unverified_context
 
 flaskApp = Flask(__name__)
-
+run_with_ngrok(flaskApp)
 database = "database.db"
 flaskApp.config['GOOGLE_ID'] = "937632115184-49gtf8rtirdg5000g0eiie325k25mpvg.apps.googleusercontent.com"
 flaskApp.config['GOOGLE_SECRET'] = "4f_qgKmV4vTwALuWlaLdV6n5"
@@ -178,4 +178,4 @@ def loginSuccess():
 
 
 if __name__ == "__main__":
-    flaskApp.run(host="0.0.0.0", port=5050)
+    flaskApp.run()
