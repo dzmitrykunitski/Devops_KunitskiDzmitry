@@ -23,12 +23,12 @@ echo "COPY flask_app.py /home/myapp/" >> tempdir/Dockerfile
 echo "COPY flask_app_test.py /home/myapp/" >> tempdir/Dockerfile
 
 
-echo "EXPOSE 5050" >> tempdir/Dockerfile
+echo "EXPOSE 5000" >> tempdir/Dockerfile
 
 echo "CMD python3 /home/myapp/flask_app.py" >> tempdir/Dockerfile
 
 cd tempdir
 docker build -t inloggenapp .
-docker run -t -d -p 5050:5050 --name myinloggenapp inloggenapp
+docker run -t -d -p 5000:5000 --name myinloggenapp inloggenapp
 docker ps -a
 
